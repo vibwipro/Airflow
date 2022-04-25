@@ -1,0 +1,222 @@
+{
+   "transportInstruction-supplyDCG":{
+      "schedule":"0 4 * * *",
+      "Pre-Processing":"True",
+      "pre-condition-jobid":"['IS-456-459-03_DCG']",
+      "subcategory":"supply_inboundDelivery",
+      "env":[
+            {
+               "name":"ADAPTOR_SOURCE_DATA_PACKAGE",
+               "value":"delivery-supply.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_DELTA_DATA_PACKAGE",
+               "value":"delivery-supply-delta.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_PREPROCESS_CATEGORY",
+               "value":"delivery-supply"
+            }
+         ]
+   },
+   "transportInstruction-demandAP":{
+      "schedule":"0 18 * * *",
+      "Pre-Processing":"True",
+      "pre-condition-jobid":"['IS-456-459-03_AP']",
+      "control-m-date":"TODAY",
+      "subcategory":"demand_outboundDelivery",
+      "env":[
+            {
+               "name":"ADAPTOR_SOURCE_DATA_PACKAGE",
+               "value":"delivery-demand.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_DELTA_DATA_PACKAGE",
+               "value":"delivery-demand-delta.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_PREPROCESS_CATEGORY",
+               "value":"delivery-demand"
+            }
+         ]
+   },
+   "transportInstruction-demandEU":{
+      "schedule":"30 21 * * *",
+      "Pre-Processing":"True",
+      "pre-condition-jobid":"['IS-456-459-03_EU']",
+      "control-m-date":"TODAY",
+      "subcategory":"demand_outboundDelivery",
+      "env":[
+            {
+               "name":"ADAPTOR_SOURCE_DATA_PACKAGE",
+               "value":"delivery-demand.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_DELTA_DATA_PACKAGE",
+               "value":"delivery-demand-delta.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_PREPROCESS_CATEGORY",
+               "value":"delivery-demand"
+            }
+         ]
+   },
+   "transportInstruction-demandNA":{
+      "schedule":"30 7 * * *",
+      "Pre-Processing":"True",
+      "pre-condition-jobid":"['IS-456-459-03_NA']",
+      "subcategory":"demand_outboundDelivery",
+      "env":[
+            {
+               "name":"ADAPTOR_SOURCE_DATA_PACKAGE",
+               "value":"delivery-demand.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_DELTA_DATA_PACKAGE",
+               "value":"delivery-demand-delta.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_PREPROCESS_CATEGORY",
+               "value":"delivery-demand"
+            }
+         ]
+   },    
+   "transportInstruction-supplyprepost":{
+      "schedule":"20 16 * * *",
+      "Pre-Processing":"True",
+      "subcategory":"supply_inboundDelivery",
+      "env":[
+            {
+               "name":"ADAPTOR_SOURCE_DATA_PACKAGE",
+               "value":"delivery-supply.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_DELTA_DATA_PACKAGE",
+               "value":"delivery-supply-delta.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_PREPROCESS_CATEGORY",
+               "value":"delivery-supply-bkp"
+            }
+         ]
+   },    
+   "transportInstruction-demandprepost":{
+      "schedule":"15 16 * * *",
+      "Pre-Processing":"True",
+      "subcategory":"demand_outboundDelivery",
+      "env":[
+            {
+               "name":"ADAPTOR_SOURCE_DATA_PACKAGE",
+               "value":"delivery-demand.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_DELTA_DATA_PACKAGE",
+               "value":"delivery-demand-delta.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_PREPROCESS_CATEGORY",
+               "value":"delivery-demand-bkp"
+            }
+         ]
+   },
+   "itemLocation-AP":{
+      "schedule":"0 18 * * *",
+      "Pre-Processing":"False",
+      "pre-condition-jobid":"['IS-106-459-01_AP']",
+      "control-m-date":"TODAY",
+      "subcategory":"APAC",
+      "env":[
+            {
+               "name":"ADAPTOR_SOURCE_DATA_PACKAGE",
+               "value":"nodes-APAC.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_DELTA_DATA_PACKAGE",
+               "value":"nodes-delta-APAC.yaml"
+            }
+         ]
+   },
+   "itemLocation-DCG":{
+      "schedule":"10 4 * * *",
+      "Pre-Processing":"False",
+      "pre-condition-jobid":"['IS-106-459-01_DCG']",
+      "subcategory":"Supplier",
+      "env":[
+            {
+               "name":"ADAPTOR_SOURCE_DATA_PACKAGE",
+               "value":"nodes-Supplier.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_DELTA_DATA_PACKAGE",
+               "value":"nodes-delta-Supplier.yaml"
+            }
+         ]
+   },
+   "itemLocation-NA":{
+      "schedule":"0 8 * * *",
+      "Pre-Processing":"False",
+      "pre-condition-jobid":"['IS-106-459-01_NA']",
+      "subcategory":"NA",
+      "env":[
+            {
+               "name":"ADAPTOR_SOURCE_DATA_PACKAGE",
+               "value":"nodes-NA.yaml"
+            },
+            {
+               "name":"ADAPTOR_SOURCE_DELTA_DATA_PACKAGE",
+               "value":"nodes-delta-NA.yaml"
+            }
+         ]
+   },
+   "itemLocation-Baseload": {
+      "schedule": "0 8 * * *",
+      "Pre-Processing": "False",
+      "subcategory": "baseload",
+      "env": [
+        {
+            "name": "ADAPTOR_SOURCE_DATA_PACKAGE",
+            "value": "nodes-baseload.yaml"
+        },
+        {
+           "name": "ADAPTOR_SOURCE_DELTA_DATA_PACKAGE",
+            "value": "nodes-delta-baseload.yaml"
+        }
+      ]
+  },
+   "inventoryMeasure-NA":{
+      "schedule":"0 9 * * *",
+      "Pre-Processing":"False",
+      "pre-condition-jobid":"['IS-106-459-01_NA']",
+      "subcategory":"NA",
+      "env": [
+            {
+            "name": "ADAPTOR_SOURCE_DATA_PACKAGE",
+            "value": "measures-NA.yaml"
+            },
+            {
+            "name": "ADAPTOR_SOURCE_DELTA_DATA_PACKAGE",
+            "value": "measures-NA-delta.yaml"
+            },
+            {
+            "name": "NUM_PARTITIONS",
+            "value": "30"
+            },
+            {
+            "name": "MIN_ITEM_RANGE",
+            "value": "00000000"
+            },
+            {
+            "name": "MAX_ITEM_RANGE",
+            "value": "99999999"
+            },
+            {
+            "name": "NUM_PARTITIONS_TRANSFORMATION",
+            "value": "20"
+            },
+            {
+               "name": "PARTITION_COLUMN",
+               "value": "partition_by"
+             }
+         ]
+   }
+}
