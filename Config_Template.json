@@ -1,0 +1,90 @@
+{
+   "apiVersion":"sparkoperator.k8s.io/v1beta2",
+   "kind":"SparkApplication",
+   "metadata":{
+      "name":"lct-spark-####",
+      "namespace":"XXXXXXXXX"
+   },
+   "spec":{
+      "dynamicAllocation":{
+         "enabled": true,
+         "maxExecutors":6,
+         "schedulerBacklogTimeout":"10s",
+         "shuffleTracking":{
+            "enabled":"true"
+         }
+      },
+      "sparkVersion":"3.0",
+    "volumes": [
+      {
+        "name": "spark-work",
+        "persistentVolumeClaim": {
+          "claimName": "file-storage"
+        }
+      },
+      {
+        "name": "transform",
+        "secret": {
+          "defaultMode": 420,
+          "secretName": "transform"
+        }
+      }
+    ],
+      "type":"Scala",
+      "mode":"cluster",
+      "sparkConf":{
+         "spark.network.timeout": "10000000"
+      },
+      "restartPolicy":{
+         "type":"OnFailure",
+         "onFailureRetries":3,
+         "onFailureRetryInterval":10,
+         "onSubmissionFailureRetries":5,
+         "onSubmissionFailureRetryInterval":20
+      },
+      "driver":{
+         "coreLimit": "300m",
+         "coreRequest": "300m",
+         "memory": "4000m",
+         "serviceAccount": "spark-operator-lct-spark",
+         "env":[
+            
+         ],
+         "envFrom": [
+        {
+          "configMapRef": {
+            "name": "transform"
+          }
+        }
+      ],
+      "volumeMounts": [
+        {
+          "name": "spark-work",
+          "mountPath": "/destination"
+        },
+        {
+          "name": "transform",
+          "mountPath": "/etc/transform/config",
+          "readOnly": true
+        }
+      ]
+      },
+      "executor":{
+      "cores": 1,
+      "coreLimit": "1",
+      "coreRequest": "300m",
+      "memory": "3000m",
+      "memoryOverhead": "500m",
+      "volumeMounts": [
+        {
+          "name": "spark-work",
+          "mountPath": "/destination"
+        }
+      ]
+      },
+      "image":"image-registry.openshift-image-registry.svc:5000/lct-saas-prod-spark/gruntime:latest",
+      "imagePullPolicy":"Always",
+      "mainApplicationFile":"local:///tmp/lcbTransformAdapter-1.0-SNAPSHOT.jar",
+      "mainClass":"com.ikea.lct.PreprocessIngester"
+   }
+}
