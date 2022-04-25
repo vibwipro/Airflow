@@ -1,0 +1,13 @@
+{
+   "config_path":"/usr/local/airflow/dags/json_files/",
+   "namespace":"lct-saas-dev2",
+   "StagingDB":"LCB_Postgres_Staging",
+   "StateDB":"LCB_StateDB",
+   "Sparkjob-API":"LCB_Sparkjob_API",
+   "controm_M_status":"LCB_control_M_status",
+   "email_connection_id":"LCB_email_connection_id",
+   "Azure_sastoken":"LCB_Azure_sastoken",
+   "Azure_file":"LCB_Azure_file",
+   "to_email":"xxxxx.yyy@comp.com",
+   "from_email":"no.reply@comp.com"
+}
