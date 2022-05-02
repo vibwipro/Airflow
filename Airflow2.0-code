@@ -1,0 +1,257 @@
+#*************************************************************************#
+#  Script : XXXXXX.py
+#  Developed by : Vibhor
+#  Developed Date : 2022-04-19
+#  Update Date : 2022-04-19
+#  Version No : 1.01
+#*************************************************************************#
+# Version No : 1.01 : Draft version.
+#*************************************************************************#
+
+#************************Import Libaries**********************************#
+import json, airflow, datetime, calendar, os
+from datetime import date, timedelta
+from airflow import DAG
+from airflow.sensors.sql_sensor import SqlSensor
+from airflow.operators.python_operator import PythonOperator, ShortCircuitOperator
+from airflow.operators.http_operator import SimpleHttpOperator
+from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.python import BranchPythonOperator
+from airflow.sensors.http_sensor import HttpSensor
+from airflow.sensors.external_task_sensor import ExternalTaskSensor
+from airflow.models import Variable
+
+#******************Config File Absolute path*****************************************#
+af_home = os.getenv('AIRFLOW_HOME')
+env_config_path = af_home + "/dags/"
+config_path = af_home + "/dags/" #Variable.get("LCT_Conf_Path")
+
+#env_config_path = Variable.get("LCT_Conf_Path")
+#config_path = Variable.get("LCT_Env_Conf_Path")
+
+#******************Default Values****************************************************#
+one_hour = 60 * 60
+select_sql = "SELECT 1 FROM lct_transformation_history WHERE "
+join_sub_category = "' AND subcategory='"
+order_rec = "' AND created_timestamp BETWEEN current_date AND NOW() ORDER BY created_timestamp DESC LIMIT 1"
+order_rec_delta = "' AND NOT transfer_completed AND created_timestamp BETWEEN current_date AND NOW() ORDER BY created_timestamp DESC LIMIT 1), 0) as Val FROM DUAL ) A"
+parent_task_sql ="' and fullload_transformation_status = 'OK' and deltaload_transformation_status = 'OK'  and created_timestamp BETWEEN current_date "
+parent_task_order ="and NOW() ORDER BY created_timestamp DESC LIMIT 1"
+
+
+#****************** Create Dynamic DAG Request.***************************************#
+
+def create_dag(dag_id,
+               schedule,
+               dag_number,
+               default_args):
+
+
+    dag = DAG(dag_id,
+              schedule_interval=schedule,
+              default_args=default_args)
+    
+#******************** Capturing Category name from DAG_id*********************************#
+    category = dag_id.split("_")[3]
+    
+
+#****************** Read JSON file for Config values.*************************************# 
+    with open(env_config_path + 'Env_Config_File.json', 'r') as E_Conf_json:
+        env_conf_json = E_Conf_json.read()
+        config_env = json.loads(env_conf_json)
+       
+    with open(config_path + 'Config_Template.json', 'r') as T_Conf_json:
+        file_content = T_Conf_json.read()
+        spark_config_template = json.loads(file_content)
+        
+    with open(config_path + 'Config_File.json', 'r') as Conf_json:
+        conf_json1 = Conf_json.read()
+        config_template = json.loads(conf_json1)
+
+
+        
+#************Default Values **************************************************************#
+    header_value = {"Content-Type": "application/json"}
+        
+#************Extract Environment variables from Environment Config File*******************#
+    sparkjob_api = config_env['Sparkjob-API']
+    statedb = config_env['StateDB']
+    controm_m_status = config_env['controm_M_status']
+    email_connection_id = config_env['email_connection_id']
+    to_email = config_env['to_email']
+    from_email = config_env['from_email']
+    namespace = config_env['namespace']
+    
+    
+#*********** Assigning enviroment variables for each category to Config template**********#         
+    conf_data = config_template[category]
+    spark_config_template['spec']['driver']['env'] = conf_data['env']
+    spark_config_template['metadata']['namespace'] = config_env['namespace']
+    
+#***********Assign Memory from Config File*************************************************#    
+    if conf_data.get('memory', 'null') != 'null':
+        spark_config_template['spec']['driver']['memory'] = conf_data['memory']
+        spark_config_template['spec']['executor']['memory'] = conf_data['memory']   
+    
+#*********** Extract Sub-category if exist, else Null*************************************# 
+    category_job = category
+    category = category.split("-")[0]
+    subcategory = conf_data.get('subcategory', 'null')
+        
+#****************** DAG Creation starts.*************************************************#
+    with dag:
+        start_op = DummyOperator(task_id="start-LCT-SaaS-Pipeline")
+            
+#*******************Branch Operator for Pre-processing of data****************************#        
+        def branch_func(**kwargs):
+            pp_status = conf_data['Pre-Processing']
+            if pp_status == 'True':
+                return 'delete-existing-pre-processing-app'
+            else:
+                return 'Pass'        
+        
+        
+        branch_op = BranchPythonOperator(
+            task_id='whether-to-bypass-preprocessing',
+            provide_context=True,
+            python_callable=branch_func,
+            trigger_rule='all_success',
+            dag=dag)
+        
+#*******************Python Operator****************************#        
+        def my_func():
+            URL = 'https://jsonplaceholder.typicode.com/todos/1'
+            PARAMS = {"completed": True}
+            data = 0
+            loop = 0
+            while data != False:
+                if loop <= 2:
+                    r = requests.get(url = URL, params = PARAMS)
+                    data = r.json()
+                    print (data['completed'])
+                    time.sleep(5)
+                    loop += 1
+                else:
+                    raise AirflowFailException("Our api key is bad!")
+                    #raise Exception("Sorry, timeout")
+          
+    #******************Control-M Job status.*************************************************#    
+    #*************fetch Job if from Config file******************************#
+        if conf_data.get('pre-condition-jobid', 'null') != 'null':
+          job_list1 = conf_data['pre-condition-jobid'] 
+          job_list = json.loads(job_list1.replace("\'", "\""))    
+
+          #*************Calculate Order Date******************************#
+          if conf_data.get('control-m-date', 'null') == 'TODAY' and int(strftime("%H%M%S", gmtime())) < 50000:
+              order_date = (date.today() - timedelta(1)).strftime("%y%m%d")
+          
+          elif conf_data.get('control-m-date', 'null') == 'TODAY':
+              order_date = date.today().strftime("%y%m%d")
+          
+          else:
+              order_date = (date.today() - timedelta(1)).strftime("%y%m%d")
+          
+
+          for job in job_list:
+                python_task	= PythonOperator(
+                            task_id='ControlM_task', 
+                            python_callable=my_func)
+
+                start_op >> python_task >> branch_op
+        else:
+            start_op >> branch_op
+
+#******************Pre-processing Part starts Here **************************************# 
+#****************** Delate existing Pre-processing POD.*********************************#  
+        delete_pp_op = SimpleHttpOperator(
+            task_id='delete-existing-pre-processing-app',
+            method='DELETE',
+            http_conn_id=sparkjob_api,
+            endpoint='/lct-pp-' + category_job.lower(),
+            headers=header_value,
+            response_check=False,
+            extra_options={"verify": False},
+            retries=0,
+            dag=dag)
+
+      
+        spark_config_template['metadata']['name'] = 'lct-pp-' + category_job.lower() 
+        if conf_data.get('Pre-processing-class','null') != 'null':
+            spark_config_template['spec']['mainClass'] = conf_data['Pre-processing-class']
+        
+#****************** Pre-processing triggering POD.*********************************#  
+        if conf_data.get('Pre-Processing', 'null') == 'True':
+            trigger_rule_v='all_done'
+        else:
+            trigger_rule_v='one_success'
+
+        
+        def trigger_spark(ds, **kwargs):
+            URL = 'https://api.ocp-dc8-03.ikeadt.com:6443/apis/sparkoperator.k8s.io/v1beta2/namespaces/lct-saas-dev2/sparkapplications'
+            r = requests.post(URL, data=json.dumps(spark_config_template), headers=header_value, verify=False)
+            print (r.status_code)
+        
+        
+        create_pp_op = PythonOperator(
+                            task_id='trigger-pre-processing-app', 
+                            trigger_rule=trigger_rule_v,
+                            python_callable=trigger_spark)
+    
+    
+#****************** SQL sensor for verification of Pre-Processing Job completion.******#    
+        sql = select_sql + "deltaload_transformation_status is null AND fullload_transformation_status is null AND preprocessing_status = 'OK' AND category='" + category + join_sub_category + subcategory + order_rec
+    
+
+        pre_proc_check = SqlSensor(task_id="check-whether-pre-processing-is-complete", 
+                                poke_interval=120, 
+                                conn_id=statedb, 
+                                sql=sql, 
+                                timeout=3*one_hour,
+                                trigger_rule='one_success',
+                                retries=0,
+                                dag=dag)
+
+
+    
+#****************** Dummy Operator.*************************************************#
+    
+        end_op = DummyOperator(task_id="I-am-done")
+        pass_op = DummyOperator(task_id="Pass")
+        
+#****************** Task flow design.***********************************************************#     
+    branch_op >> delete_pp_op
+    branch_op >> pass_op
+    [ (delete_pp_op >> create_pp_op >> pre_proc_check), pass_op] >> end_op
+
+    
+    return dag
+
+#****************** Create list of categoeries.*******************************************************#
+
+list = ['site-global']
+
+
+#****************** build a dag for each categoery listed above.***************************************#
+for idx, list in enumerate(list):
+    dag_id = 'DAG_LCT_SaaS_{}'.format(str(list))
+
+    default_args = {'owner': 'airflow',
+                    'start_date': airflow.utils.dates.days_ago(1),
+                    'depends_on_past': False,
+                    'retries': 1,
+                    'retry_delay': datetime.timedelta(hours=5)
+                    }
+
+#****************** Extracting Scheduling from Config file.***************************************#    
+    with open(config_path + 'Config_File.json', 'r') as Conf_schedul:
+        Conf_schedul1 = Conf_schedul.read()
+        Conf_schedul_template = json.loads(Conf_schedul1)    
+
+    schedule = Conf_schedul_template[list]['schedule']
+
+    dag_number = idx
+
+    globals()[dag_id] = create_dag(dag_id,
+                                  schedule,
+                                  dag_number,
+                                  default_args)
